@@ -26,6 +26,7 @@ AREA_KEYWORDS = [
     "fantalului", "фанталулуй",
     "ierusalim", "иерусалим",
     "andrei botezatu", "андрей ботезату",
+    "bănulescu-bodoni", "banulescu-bodoni", "бэнулеску-бодони", "митрополит гавриил",
     # Landmarks
     "ionesco", "ионеско",
     "turist hotel", "турист",
