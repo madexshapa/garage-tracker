@@ -159,22 +159,26 @@ async def check_for_new_listings():
     print(f"Total: {len(all_listings)} listings")
     
     new_count = 0
+    new_in_area = 0
+    
     for listing in all_listings:
         if listing["id"] in seen:
             continue
         
         seen.add(listing["id"])
+        new_count += 1
         
         in_area = matches_area(listing["full_text"])
-        area_tag = "📍 IN YOUR AREA!" if in_area else ""
         
         # Only notify for listings in your area
         if not in_area:
             continue
         
+        new_in_area += 1
+        
         title = listing['title'] if listing['title'] != f"Listing #{listing['id'].split('_')[1]}" else "New listing"
         
-        message = f"""🚗 <b>New Garage Listing!</b> {area_tag}
+        message = f"""🚗 <b>New Garage Listing!</b> 📍 IN YOUR AREA!
 
 <b>{title}</b>
 💰 {listing['price']}
@@ -188,9 +192,18 @@ async def check_for_new_listings():
         time.sleep(0.5)
     
     save_seen(seen)
-    print(f"Sent {new_count} new listings to Telegram")
+    print(f"Sent {new_in_area} new listings to Telegram")
     
-    return new_count
+    # Send summary (always, so user knows bot is running)
+    summary = f"""📊 <b>Hourly Check</b>
+
+Checked {len(all_listings)} listings, {new_in_area} new in your area.
+
+🔍 <a href="https://999.md/ru/list/real-estate/garages-and-parking">Browse all listings</a>"""
+    
+    send_telegram(summary)
+    
+    return new_in_area
 
 
 async def run_scheduler():
