@@ -4,6 +4,7 @@ import os
 import re
 import time
 from datetime import datetime
+import pytz
 from playwright.async_api import async_playwright
 import requests
 
@@ -11,6 +12,15 @@ import requests
 TELEGRAM_TOKEN = "8532240457:AAHPuU0y_ajjIMs8uubysjsPJtl32Hx4E6g"
 CHAT_ID = "1018766092"
 SEEN_FILE = "seen_listings.json"
+
+# Moldova timezone
+MD_TZ = pytz.timezone('Europe/Chisinau')
+
+def is_quiet_hours():
+    """Check if current time in Moldova is between 22:00 and 8:00"""
+    md_time = datetime.now(MD_TZ)
+    hour = md_time.hour
+    return hour >= 22 or hour < 8
 
 # Area keywords from your map (near bd. Grigore Vieru)
 AREA_KEYWORDS = [
@@ -138,6 +148,11 @@ async def scrape_999md(page):
 async def check_for_new_listings():
     print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Checking for new garage listings...")
     
+    # Check if it's quiet hours (22:00 - 8:00 Moldova time)
+    quiet = is_quiet_hours()
+    if quiet:
+        print("Quiet hours (22:00-8:00 MD) - skipping notifications")
+    
     seen = load_seen()
     all_listings = []
     
@@ -176,6 +191,10 @@ async def check_for_new_listings():
         
         new_in_area += 1
         
+        # Skip sending during quiet hours
+        if quiet:
+            continue
+        
         title = listing['title'] if listing['title'] != f"Listing #{listing['id'].split('_')[1]}" else "New listing"
         
         message = f"""🚗 <b>New Garage Listing!</b> 📍 IN YOUR AREA!
@@ -194,14 +213,15 @@ async def check_for_new_listings():
     save_seen(seen)
     print(f"Sent {new_in_area} new listings to Telegram")
     
-    # Send summary (always, so user knows bot is running)
-    summary = f"""📊 <b>Hourly Check</b>
+    # Send summary (skip during quiet hours)
+    if not quiet:
+        summary = f"""📊 <b>Hourly Check</b>
 
 Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
 🔍 <a href="https://999.md/ru/list/real-estate/garages-and-parking">Browse all listings</a>"""
-    
-    send_telegram(summary)
+        
+        send_telegram(summary)
     
     return new_in_area
 
