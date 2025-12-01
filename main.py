@@ -79,44 +79,47 @@ def matches_area(text):
 async def scrape_999md(page):
     """Scrape garage listings from 999.md using Playwright"""
     listings = []
-    url = "https://999.md/ru/list/real-estate/garages-and-parking"
     
-    try:
-        await page.goto(url, wait_until="networkidle", timeout=60000)
-        await page.wait_for_timeout(3000)
-        
-        # Get page content and find listing links using regex
-        content = await page.content()
-        
-        # Find all listing links (format: /ru/12345678 - 8 digit IDs)
-        listing_pattern = r'href="(/ru/(\d{7,9}))"'
-        matches = re.findall(listing_pattern, content)
-        
-        print(f"999.md: Found {len(matches)} potential listing links")
-        
-        # Get unique listing IDs
-        seen_ids = set()
-        for href, listing_id in matches:
-            if listing_id in seen_ids:
-                continue
-            seen_ids.add(listing_id)
+    # Check both rent and sale listings
+    urls = [
+        ("https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=776", "rent"),  # Rent
+        ("https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=774", "sale"),  # Sale
+    ]
+    
+    seen_ids = set()
+    
+    for url, listing_type in urls:
+        try:
+            await page.goto(url, wait_until="networkidle", timeout=60000)
+            await page.wait_for_timeout(3000)
             
-            full_url = f"https://999.md{href}"
+            # Get page content and find listing links using regex
+            content = await page.content()
             
-            # Try to find title and price near this link in the HTML
-            # For now, we'll visit each listing page to get details
-            listings.append({
-                "id": f"999_{listing_id}",
-                "title": f"Listing #{listing_id}",
-                "price": "See link",
-                "location": "",
-                "url": full_url,
-                "source": "999.md",
-                "full_text": ""
-            })
-        
-        # If we found listings, try to get more details from the page
-        if listings:
+            # Find all listing links (format: /ru/12345678 - 8 digit IDs)
+            listing_pattern = r'href="(/ru/(\d{7,9}))"'
+            matches = re.findall(listing_pattern, content)
+            
+            print(f"999.md ({listing_type}): Found {len(matches)} potential listing links")
+            
+            for href, listing_id in matches:
+                if listing_id in seen_ids:
+                    continue
+                seen_ids.add(listing_id)
+                
+                full_url = f"https://999.md{href}"
+                
+                listings.append({
+                    "id": f"999_{listing_id}",
+                    "title": f"Listing #{listing_id}",
+                    "price": "See link",
+                    "location": "",
+                    "url": full_url,
+                    "source": "999.md",
+                    "type": listing_type,
+                    "full_text": ""
+                })
+            
             # Try to extract titles from the listing cards
             cards = await page.query_selector_all('a[href*="/ru/"]')
             for card in cards:
@@ -130,7 +133,6 @@ async def scrape_999md(page):
                     # Get text content of the card
                     text = await card.inner_text()
                     if text and len(text) > 5:
-                        # Update the listing with actual title
                         for lst in listings:
                             if lst["id"] == f"999_{listing_id}":
                                 lst["title"] = text.split("\n")[0][:100]
@@ -139,8 +141,8 @@ async def scrape_999md(page):
                 except:
                     continue
                     
-    except Exception as e:
-        print(f"Error scraping 999.md: {e}")
+        except Exception as e:
+            print(f"Error scraping 999.md ({listing_type}): {e}")
     
     return listings
 
@@ -167,7 +169,7 @@ async def check_for_new_listings():
         # Scrape 999.md
         listings_999 = await scrape_999md(page)
         all_listings.extend(listings_999)
-        print(f"Found {len(listings_999)} listings on 999.md")
+        print(f"Found {len(listings_999)} total listings on 999.md")
         
         await browser.close()
     
@@ -196,10 +198,12 @@ async def check_for_new_listings():
             continue
         
         title = listing['title'] if listing['title'] != f"Listing #{listing['id'].split('_')[1]}" else "New listing"
+        listing_type = "🏷 SALE" if listing.get('type') == 'sale' else "🔑 RENT"
         
         message = f"""🚗 <b>New Garage Listing!</b> 📍 IN YOUR AREA!
 
 <b>{title}</b>
+{listing_type}
 💰 {listing['price']}
 📍 {listing['location']}
 🌐 {listing['source']}
@@ -219,7 +223,8 @@ async def check_for_new_listings():
 
 Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
-🔍 <a href="https://999.md/ru/list/real-estate/garages-and-parking">Browse all listings</a>"""
+🔑 <a href="https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=776">Browse RENT listings</a>
+🏷 <a href="https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=774">Browse SALE listings</a>"""
         
         send_telegram(summary)
     
