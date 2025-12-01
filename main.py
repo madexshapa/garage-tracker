@@ -25,6 +25,7 @@ AREA_KEYWORDS = [
     "piața veche", "piata veche", "пяца веке",
     "fantalului", "фанталулуй",
     "ierusalim", "иерусалим",
+    "andrei botezatu", "андрей ботезату",
     # Landmarks
     "ionesco", "ионеско",
     "turist hotel", "турист",
