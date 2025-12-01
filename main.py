@@ -225,7 +225,7 @@ Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
 async def run_scheduler():
     print("🚗 Garage Tracker started!")
-    send_telegram("🚗 Garage Tracker started! Checking every hour...")
+    send_telegram("🚗 Garage Tracker started! Checking every hour at :00")
     
     while True:
         try:
@@ -234,8 +234,13 @@ async def run_scheduler():
             print(f"Error: {e}")
             send_telegram(f"⚠️ Error: {str(e)[:100]}")
         
-        print("Waiting 1 hour until next check...")
-        await asyncio.sleep(3600)
+        # Calculate seconds until next hour
+        now = datetime.now()
+        minutes_until_next_hour = 60 - now.minute
+        seconds_until_next_hour = (minutes_until_next_hour * 60) - now.second
+        
+        print(f"Waiting {minutes_until_next_hour} minutes until next check at :00...")
+        await asyncio.sleep(seconds_until_next_hour)
 
 
 if __name__ == "__main__":
