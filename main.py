@@ -25,8 +25,6 @@ AREA_KEYWORDS = [
     "piața veche", "piata veche", "пяца веке",
     "fantalului", "фанталулуй",
     "ierusalim", "иерусалим",
-    "ion pruncul", "ион прункул",
-    "luncii", "лунчий",
     # Landmarks
     "ionesco", "ионеско",
     "turist hotel", "турист",
