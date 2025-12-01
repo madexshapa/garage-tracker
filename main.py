@@ -137,7 +137,8 @@ async def scrape_999md(page):
 async def scrape_makler(page):
     """Scrape garage listings from makler.md"""
     listings = []
-    url = "https://makler.md/ru/chisinau/real-estate/garages"
+    # URL with garage/parking filter (field_437=2817)
+    url = "https://makler.md/ru/chisinau/real-estate/real-estate-for-rent/premises-for-rent?field_437%5B%5D=2817"
     
     try:
         await page.goto(url, wait_until="networkidle", timeout=60000)
