@@ -14,14 +14,24 @@ SEEN_FILE = "seen_listings.json"
 
 # Area keywords from your map (near bd. Grigore Vieru)
 AREA_KEYWORDS = [
-    "grigore vieru", "grigorе vieru", "gr. vieru",
-    "albișoara", "albisoara", "албишоара",
-    "pușkin", "puskin", "пушкин",
-    "română", "romana", "романэ",
+    # Main streets
+    "grigore vieru", "grigorе vieru", "gr. vieru", "григоре виеру",
+    "albișoara", "albisoara", "албишоара", "албишoara",
+    "pușkin", "puskin", "пушкин", "pushkin",
+    "română", "romana", "романэ", "романа",
+    # Nearby streets from map
+    "petru rareș", "petru rares", "петру рареш",
+    "arhanghel mihail", "архангел михаил",
+    "piața veche", "piata veche", "пяца веке",
+    "fantalului", "фанталулуй",
+    "ierusalim", "иерусалим",
+    "ion pruncul", "ион прункул",
+    "luncii", "лунчий",
+    # Landmarks
+    "ionesco", "ионеско",
+    "turist hotel", "турист",
+    # General center area
     "centru", "центр", "center",
-    "știrbei vodă", "stirbei voda",
-    "columna", "колумна",
-    "ștefan cel mare", "stefan cel mare",
 ]
 
 
@@ -225,8 +235,9 @@ async def check_for_new_listings():
         in_area = matches_area(listing["full_text"])
         area_tag = "📍 IN YOUR AREA!" if in_area else ""
         
-        # Uncomment next line to only get notifications for your area:
-        # if not in_area: continue
+        # Only notify for listings in your area
+        if not in_area:
+            continue
         
         title = listing['title'] if listing['title'] != f"Listing #{listing['id'].split('_')[1]}" else "New listing"
         
