@@ -30,8 +30,6 @@ AREA_KEYWORDS = [
     # Landmarks
     "ionesco", "ионеско",
     "turist hotel", "турист",
-    # General center area
-    "centru", "центр", "center",
 ]
 
 
