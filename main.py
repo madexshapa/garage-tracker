@@ -80,69 +80,64 @@ async def scrape_999md(page):
     """Scrape garage listings from 999.md using Playwright"""
     listings = []
     
-    # Check both rent and sale listings
-    urls = [
-        ("https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=776", "rent"),  # Rent
-        ("https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=774", "sale"),  # Sale
-    ]
+    # Filtered URL: Centru + Rîșcanovka, Garage + Underground parking, Sale + Rent
+    url = "https://999.md/ru/list/real-estate/garages-and-parking?appl=1&ef=16,32,9441,46&eo=13859,12885,12900,12912&o_46_259=1043,1041&o_32_9_12900_13859=15667,15664&o_16_1=912,776"
     
     seen_ids = set()
     
-    for url, listing_type in urls:
-        try:
-            await page.goto(url, wait_until="networkidle", timeout=60000)
-            await page.wait_for_timeout(3000)
+    try:
+        await page.goto(url, wait_until="networkidle", timeout=60000)
+        await page.wait_for_timeout(3000)
+        
+        # Get page content and find listing links using regex
+        content = await page.content()
+        
+        # Find all listing links (format: /ru/12345678 - 8 digit IDs)
+        listing_pattern = r'href="(/ru/(\d{7,9}))"'
+        matches = re.findall(listing_pattern, content)
+        
+        print(f"999.md: Found {len(matches)} potential listing links")
+        
+        for href, listing_id in matches:
+            if listing_id in seen_ids:
+                continue
+            seen_ids.add(listing_id)
             
-            # Get page content and find listing links using regex
-            content = await page.content()
+            full_url = f"https://999.md{href}"
             
-            # Find all listing links (format: /ru/12345678 - 8 digit IDs)
-            listing_pattern = r'href="(/ru/(\d{7,9}))"'
-            matches = re.findall(listing_pattern, content)
-            
-            print(f"999.md ({listing_type}): Found {len(matches)} potential listing links")
-            
-            for href, listing_id in matches:
-                if listing_id in seen_ids:
+            listings.append({
+                "id": f"999_{listing_id}",
+                "title": f"Listing #{listing_id}",
+                "price": "See link",
+                "location": "",
+                "url": full_url,
+                "source": "999.md",
+                "full_text": ""
+            })
+        
+        # Try to extract titles from the listing cards
+        cards = await page.query_selector_all('a[href*="/ru/"]')
+        for card in cards:
+            try:
+                href = await card.get_attribute("href")
+                if not href or not re.match(r'/ru/\d{7,9}', href):
                     continue
-                seen_ids.add(listing_id)
                 
-                full_url = f"https://999.md{href}"
+                listing_id = href.split("/")[-1]
                 
-                listings.append({
-                    "id": f"999_{listing_id}",
-                    "title": f"Listing #{listing_id}",
-                    "price": "See link",
-                    "location": "",
-                    "url": full_url,
-                    "source": "999.md",
-                    "type": listing_type,
-                    "full_text": ""
-                })
-            
-            # Try to extract titles from the listing cards
-            cards = await page.query_selector_all('a[href*="/ru/"]')
-            for card in cards:
-                try:
-                    href = await card.get_attribute("href")
-                    if not href or not re.match(r'/ru/\d{7,9}', href):
-                        continue
-                    
-                    listing_id = href.split("/")[-1]
-                    
-                    # Get text content of the card
-                    text = await card.inner_text()
-                    if text and len(text) > 5:
-                        for lst in listings:
-                            if lst["id"] == f"999_{listing_id}":
-                                lst["title"] = text.split("\n")[0][:100]
-                                lst["full_text"] = text
-                                break
-                except:
-                    continue
-                    
-        except Exception as e:
-            print(f"Error scraping 999.md ({listing_type}): {e}")
+                # Get text content of the card
+                text = await card.inner_text()
+                if text and len(text) > 5:
+                    for lst in listings:
+                        if lst["id"] == f"999_{listing_id}":
+                            lst["title"] = text.split("\n")[0][:100]
+                            lst["full_text"] = text
+                            break
+            except:
+                continue
+                
+    except Exception as e:
+        print(f"Error scraping 999.md: {e}")
     
     return listings
 
@@ -198,12 +193,10 @@ async def check_for_new_listings():
             continue
         
         title = listing['title'] if listing['title'] != f"Listing #{listing['id'].split('_')[1]}" else "New listing"
-        listing_type = "🏷 SALE" if listing.get('type') == 'sale' else "🔑 RENT"
         
         message = f"""🚗 <b>New Garage Listing!</b> 📍 IN YOUR AREA!
 
 <b>{title}</b>
-{listing_type}
 💰 {listing['price']}
 📍 {listing['location']}
 🌐 {listing['source']}
@@ -223,8 +216,7 @@ async def check_for_new_listings():
 
 Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
-🔑 <a href="https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=776">Browse RENT listings</a>
-🏷 <a href="https://999.md/ru/list/real-estate/garages-and-parking?o_30_1=774">Browse SALE listings</a>"""
+🔍 <a href="https://999.md/ru/list/real-estate/garages-and-parking?appl=1&ef=16,32,9441,46&eo=13859,12885,12900,12912&o_46_259=1043,1041&o_32_9_12900_13859=15667,15664&o_16_1=912,776">Browse all listings</a>"""
         
         send_telegram(summary)
     
