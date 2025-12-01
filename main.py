@@ -134,68 +134,6 @@ async def scrape_999md(page):
     return listings
 
 
-async def scrape_makler(page):
-    """Scrape garage listings from makler.md"""
-    listings = []
-    # URL with garage/parking filter (field_437=2817)
-    url = "https://makler.md/ru/chisinau/real-estate/real-estate-for-rent/premises-for-rent?field_437%5B%5D=2817"
-    
-    try:
-        await page.goto(url, wait_until="networkidle", timeout=60000)
-        await page.wait_for_timeout(3000)
-        
-        content = await page.content()
-        
-        # Find listing links (format: /ru/real-estate/garages/an/12345)
-        listing_pattern = r'href="(/ru/[^"]*?/an/(\d+))"'
-        matches = re.findall(listing_pattern, content)
-        
-        print(f"makler.md: Found {len(matches)} potential listing links")
-        
-        seen_ids = set()
-        for href, listing_id in matches:
-            if listing_id in seen_ids:
-                continue
-            seen_ids.add(listing_id)
-            
-            full_url = f"https://makler.md{href}"
-            
-            listings.append({
-                "id": f"makler_{listing_id}",
-                "title": f"Listing #{listing_id}",
-                "price": "See link",
-                "location": "",
-                "url": full_url,
-                "source": "makler.md",
-                "full_text": ""
-            })
-        
-        # Try to get more details
-        cards = await page.query_selector_all('a[href*="/an/"]')
-        for card in cards:
-            try:
-                href = await card.get_attribute("href")
-                if not href or "/an/" not in href:
-                    continue
-                
-                listing_id = href.split("/an/")[-1].split("?")[0]
-                text = await card.inner_text()
-                
-                if text and len(text) > 5:
-                    for lst in listings:
-                        if lst["id"] == f"makler_{listing_id}":
-                            lst["title"] = text.split("\n")[0][:100]
-                            lst["full_text"] = text
-                            break
-            except:
-                continue
-                    
-    except Exception as e:
-        print(f"Error scraping makler.md: {e}")
-    
-    return listings
-
-
 async def check_for_new_listings():
     print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Checking for new garage listings...")
     
@@ -210,14 +148,10 @@ async def check_for_new_listings():
         )
         page = await context.new_page()
         
-        # Scrape both sources
+        # Scrape 999.md
         listings_999 = await scrape_999md(page)
         all_listings.extend(listings_999)
         print(f"Found {len(listings_999)} listings on 999.md")
-        
-        listings_makler = await scrape_makler(page)
-        all_listings.extend(listings_makler)
-        print(f"Found {len(listings_makler)} listings on makler.md")
         
         await browser.close()
     
