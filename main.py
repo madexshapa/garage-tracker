@@ -17,10 +17,10 @@ SEEN_FILE = "seen_listings.json"
 MD_TZ = pytz.timezone('Europe/Chisinau')
 
 def is_quiet_hours():
-    """Check if current time in Moldova is outside 10:00-22:00"""
+    """Check if current time in Moldova is outside 09:00-21:00"""
     md_time = datetime.now(MD_TZ)
     hour = md_time.hour
-    return hour > 22 or hour < 10
+    return hour >= 21 or hour < 9
 
 # Area keywords from your map (near bd. Grigore Vieru)
 AREA_KEYWORDS = [
@@ -148,7 +148,7 @@ async def check_for_new_listings():
     # Check if it's quiet hours (outside 10:00-22:00 Moldova time)
     quiet = is_quiet_hours()
     if quiet:
-        print("Quiet hours (outside 10:00-22:00 MD) - skipping notifications")
+        print("Quiet hours (outside 09:00-21:00 MD) - skipping notifications")
     
     seen = load_seen()
     all_listings = []
@@ -225,10 +225,10 @@ Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
 async def run_scheduler():
     print("🚗 Garage Tracker started!")
-    send_telegram("🚗 Garage Tracker started! Checking at 10:00, 13:00, 16:00, 19:00, 22:00 MD time")
+    send_telegram("🚗 Garage Tracker started! Checking at 09:00, 12:00, 15:00, 18:00, 21:00 MD time")
     
-    # Check times in Moldova (10, 13, 16, 19, 22)
-    check_hours = [10, 13, 16, 19, 22]
+    # Check times in Moldova (9, 12, 15, 18, 21)
+    check_hours = [9, 12, 15, 18, 21]
     
     while True:
         try:
