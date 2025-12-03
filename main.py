@@ -17,10 +17,10 @@ SEEN_FILE = "seen_listings.json"
 MD_TZ = pytz.timezone('Europe/Chisinau')
 
 def is_quiet_hours():
-    """Check if current time in Moldova is between 22:00 and 8:00"""
+    """Check if current time in Moldova is outside 10:00-22:00"""
     md_time = datetime.now(MD_TZ)
     hour = md_time.hour
-    return hour >= 22 or hour < 8
+    return hour > 22 or hour < 10
 
 # Area keywords from your map (near bd. Grigore Vieru)
 AREA_KEYWORDS = [
@@ -145,10 +145,10 @@ async def scrape_999md(page):
 async def check_for_new_listings():
     print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Checking for new garage listings...")
     
-    # Check if it's quiet hours (22:00 - 8:00 Moldova time)
+    # Check if it's quiet hours (outside 10:00-22:00 Moldova time)
     quiet = is_quiet_hours()
     if quiet:
-        print("Quiet hours (22:00-8:00 MD) - skipping notifications")
+        print("Quiet hours (outside 10:00-22:00 MD) - skipping notifications")
     
     seen = load_seen()
     all_listings = []
@@ -225,7 +225,10 @@ Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
 async def run_scheduler():
     print("🚗 Garage Tracker started!")
-    send_telegram("🚗 Garage Tracker started! Checking every hour at :00")
+    send_telegram("🚗 Garage Tracker started! Checking at 10:00, 13:00, 16:00, 19:00, 22:00 MD time")
+    
+    # Check times in Moldova (10, 13, 16, 19, 22)
+    check_hours = [10, 13, 16, 19, 22]
     
     while True:
         try:
@@ -234,13 +237,30 @@ async def run_scheduler():
             print(f"Error: {e}")
             send_telegram(f"⚠️ Error: {str(e)[:100]}")
         
-        # Calculate seconds until next hour
-        now = datetime.now()
-        minutes_until_next_hour = 60 - now.minute
-        seconds_until_next_hour = (minutes_until_next_hour * 60) - now.second
+        # Calculate seconds until next check time
+        now = datetime.now(MD_TZ)
+        current_hour = now.hour
+        current_minute = now.minute
         
-        print(f"Waiting {minutes_until_next_hour} minutes until next check at :00...")
-        await asyncio.sleep(seconds_until_next_hour)
+        # Find next check hour
+        next_check = None
+        for h in check_hours:
+            if h > current_hour or (h == current_hour and current_minute < 1):
+                next_check = h
+                break
+        
+        # If no check left today, next is tomorrow at 10:00
+        if next_check is None:
+            next_check = check_hours[0]
+            hours_until = (24 - current_hour) + next_check
+        else:
+            hours_until = next_check - current_hour
+        
+        minutes_until = (hours_until * 60) - current_minute
+        seconds_until = (minutes_until * 60) - now.second
+        
+        print(f"Next check at {next_check}:00 MD time (in {hours_until}h {60-current_minute}min)")
+        await asyncio.sleep(seconds_until)
 
 
 if __name__ == "__main__":
