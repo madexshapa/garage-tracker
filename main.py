@@ -210,11 +210,11 @@ async def check_for_new_listings():
     save_seen(seen)
     print(f"Sent {new_in_area} new listings to Telegram")
     
-    # Send summary (skip during quiet hours)
-    if not quiet:
-        summary = f"""📊 <b>Hourly Check</b>
+    # Send summary only if there are new listings in area (skip during quiet hours)
+    if not quiet and new_in_area > 0:
+        summary = f"""📊 <b>Check Complete</b>
 
-Checked {len(all_listings)} listings, {new_in_area} new in your area.
+Found {new_in_area} new listing(s) in your area!
 
 🔍 <a href="https://999.md/ru/list/real-estate/garages-and-parking?appl=1&ef=16,32,9441,46&eo=13859,12885,12900,12912&o_46_259=1043,1041&o_32_9_12900_13859=15667,15664&o_16_1=912,776">Browse all listings</a>"""
         
@@ -225,7 +225,6 @@ Checked {len(all_listings)} listings, {new_in_area} new in your area.
 
 async def run_scheduler():
     print("🚗 Garage Tracker started!")
-    send_telegram("🚗 Garage Tracker started! Checking at 09:00, 12:00, 15:00, 18:00, 21:00 MD time")
     
     # Check times in Moldova (9, 12, 15, 18, 21)
     check_hours = [9, 12, 15, 18, 21]
